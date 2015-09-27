@@ -1,0 +1,75 @@
+---
+title: "Practical Machine Learning - Project"
+author: "Kausar"
+date: "Monday, September 28, 2015"
+output: html_document
+---
+
+###Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+###Data
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+###Objective
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+###Loading and Transforming the Data
+
+```{r}
+data <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+str(data)
+```
+
+Remove variables with NA values
+```{r}
+data <- data[, colSums(is.na(data)) == 0] 
+```
+
+Remove variables that have to do with the subject as well as time of exercise.
+```{r}
+data <- data[, -c(1:7)]
+
+dim(data)
+```
+
+This results in the data set being pared down to 13,737 observations and 53 variables.
+
+###Partition the data into training and test datasets
+
+```{r}
+library(caret)
+set.seed(144)
+inTrain <- createDataPartition(y=data$classe, p=0.7, list=FALSE)
+training <- data[inTrain, ]
+testing <- data[-inTrain, ]
+dim(training); dim(testing)
+```
+
+###Model Building and Evaluation
+
+Build classification tree and random forest models and evaluate their accuracy on the test data set.
+
+```{r}
+## Classification Tree
+modelCART <- train(classe ~ ., method="rpart", data=training)
+library(rattle)
+fancyRpartPlot(modelCART$finalModel)
+plot(modelCART$finalModel, uniform=TRUE, main="Classification Tree")
+text(modelCART$finalModel, use.n=TRUE, all=TRUE, cex=.8)
+predictCART <- predict(modelCART, testing)
+confusionMatrix(predictCART, testing$classe)
+
+## Random Forest
+library(randomForest)
+modelRF <- randomForest(classe ~ ., data=training, mtry=7, importance=TRUE)
+predictRF <- predict(modelRF, testing)
+confusionMatrix(predictRF, testing$classe)
+```
+
+As the random Forest model is more accurate (with an accuracy of 0.9966), it is chosen as the final model. The expected out-of-sample error is 1-0.9966 = 0.0034.
